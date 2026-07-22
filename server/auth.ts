@@ -63,8 +63,8 @@ export function registerDiscordAuthRoutes(app: express.Express) {
       return
     }
 
-    const state = randomToken()
-    response.cookie(OAUTH_STATE_COOKIE, oauthCookieOptions(config.secureCookies, OAUTH_STATE_MAX_AGE_SECONDS))
+    const state = createSignedState(config.sessionSecret)
+    response.cookie(OAUTH_STATE_COOKIE, state, oauthCookieOptions(config.secureCookies, OAUTH_STATE_MAX_AGE_SECONDS))
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -86,7 +86,7 @@ export function registerDiscordAuthRoutes(app: express.Express) {
     const code = typeof request.query.code === 'string' ? request.query.code : ''
     const state = typeof request.query.state === 'string' ? request.query.state : ''
     const expectedState = getCookie(request, OAUTH_STATE_COOKIE)
-    if (!code || !state || !expectedState || state !== expectedState) {
+    if (!code || !state || !validOAuthState(state, expectedState, config.sessionSecret)) {
       response.status(400).json({ error: 'invalid_oauth_state' })
       return
     }
@@ -349,6 +349,40 @@ function safeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left)
   const rightBuffer = Buffer.from(right)
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer)
+}
+
+function createSignedState(secret: string) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      nonce: randomToken(),
+      expiresAt: Math.floor(Date.now() / 1000) + OAUTH_STATE_MAX_AGE_SECONDS,
+    }),
+  ).toString('base64url')
+  const signature = createHmac('sha256', secret).update(payload).digest('base64url')
+  return `${payload}.${signature}`
+}
+
+function validOAuthState(state: string, expectedState: string | null, secret: string) {
+  if (expectedState && state === expectedState) {
+    return true
+  }
+
+  const [payload, signature] = state.split('.')
+  if (!payload || !signature) {
+    return false
+  }
+
+  const expectedSignature = createHmac('sha256', secret).update(payload).digest('base64url')
+  if (!safeEqual(signature, expectedSignature)) {
+    return false
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { expiresAt?: number }
+    return typeof parsed.expiresAt === 'number' && parsed.expiresAt > Math.floor(Date.now() / 1000)
+  } catch {
+    return false
+  }
 }
 
 function getCookie(request: express.Request, name: string) {
