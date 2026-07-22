@@ -8,6 +8,7 @@
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "tsx watch server/index.ts",
     "build": "vue-tsc --noEmit && vite build && tsc -p tsconfig.server.json",
+    "start": "node dist-server/server/index.js",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint . --ext .ts,.vue --max-warnings=0",
     "format": "prettier --write ."

@@ -8,7 +8,7 @@ import type {
   ShopItem,
   Team,
   TournamentOverview,
-} from '../types'
+} from '../types/index.js'
 
 export const overview: TournamentOverview = {
   title: '奈落鯖サバイバルカップ',

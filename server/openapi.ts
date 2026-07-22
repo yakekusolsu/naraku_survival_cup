@@ -1,4 +1,4 @@
-import { apiEndpoints } from '../src/data/mock'
+import { apiEndpoints } from '../src/data/mock.js'
 
 export const openApiDocument = {
   openapi: '3.1.0',

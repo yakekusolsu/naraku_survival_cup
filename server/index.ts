@@ -3,8 +3,8 @@ import express from 'express'
 import { createServer } from 'node:http'
 import { Server } from 'socket.io'
 import swaggerUi from 'swagger-ui-express'
-import { registerDiscordAuthRoutes } from './auth'
-import { loadEnvFile } from './env'
+import { registerDiscordAuthRoutes } from './auth.js'
+import { loadEnvFile } from './env.js'
 import {
   apiEndpoints,
   events as mockEvents,
@@ -15,9 +15,9 @@ import {
   schedule,
   shop,
   teams as mockTeams,
-} from '../src/data/mock'
-import { openApiDocument } from './openapi'
-import type { LiveEvent, RankingPlayer } from '../src/types'
+} from '../src/data/mock.js'
+import { openApiDocument } from './openapi.js'
+import type { LiveEvent, RankingPlayer } from '../src/types/index.js'
 
 loadEnvFile()
 

@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import type express from 'express'
-import { deleteMinecraftLink, getMinecraftLink, saveMinecraftLink, type MinecraftProfile } from './accountLinks'
+import { deleteMinecraftLink, getMinecraftLink, saveMinecraftLink, type MinecraftProfile } from './accountLinks.js'
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10'
 const DISCORD_AUTHORIZE_URL = 'https://discord.com/oauth2/authorize'
