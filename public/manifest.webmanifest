@@ -1,0 +1,17 @@
+{
+  "name": "奈落鯖サバイバルカップ Summer 2026",
+  "short_name": "NSC Summer",
+  "description": "大型eSportsサバイバルイベント公式サイト",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#061827",
+  "theme_color": "#061827",
+  "icons": [
+    {
+      "src": "/hero-summer-2026.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

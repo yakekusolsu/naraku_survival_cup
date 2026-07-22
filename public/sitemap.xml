@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://nsc.example.com/</loc></url>
+  <url><loc>https://nsc.example.com/rules</loc></url>
+  <url><loc>https://nsc.example.com/schedule</loc></url>
+  <url><loc>https://nsc.example.com/ranking</loc></url>
+  <url><loc>https://nsc.example.com/teams</loc></url>
+  <url><loc>https://nsc.example.com/players</loc></url>
+  <url><loc>https://nsc.example.com/news</loc></url>
+  <url><loc>https://nsc.example.com/map</loc></url>
+  <url><loc>https://nsc.example.com/shop</loc></url>
+  <url><loc>https://nsc.example.com/api-docs</loc></url>
+</urlset>

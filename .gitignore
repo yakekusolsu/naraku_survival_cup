@@ -1,0 +1,7 @@
+.DS_Store
+.env
+data/auth-links.json
+data/*.tmp
+dist/
+dist-server/
+node_modules/
