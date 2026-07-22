@@ -84,11 +84,17 @@ function messageForPurchaseError(error: unknown) {
   if (message.includes('minecraft_link_required')) {
     return 'My PageでMinecraft IDを連携してから購入してください。'
   }
-  if (message.includes('java_uuid_required_for_plugin_purchase')) {
-    return 'プラグイン反映にはJava版UUIDが必要です。統合版/Floodgate購入は現在準備中です。'
-  }
   if (message.includes('plugin_shop_purchase_failed') || message.includes('502')) {
-    return 'プラグインへの送信に失敗しました。サーバー接続とポイント残高を確認してください。'
+    if (message.includes('Buyer player is not registered')) {
+      return 'Minecraftサーバーに一度参加してから購入してください。連携IDとゲーム内IDも確認してください。'
+    }
+    if (message.includes('Not enough points')) {
+      return 'ポイントが足りません。'
+    }
+    if (message.includes('No online team members') || message.includes('team.not-in-team')) {
+      return 'チーム所属またはオンライン状態が必要です。ゲーム内でチームに参加してから試してください。'
+    }
+    return 'プラグインへの送信に失敗しました。サーバー接続、ポイント残高、チーム状態を確認してください。'
   }
   return '購入リクエストに失敗しました。時間をおいて再試行してください。'
 }

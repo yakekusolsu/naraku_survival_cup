@@ -208,16 +208,14 @@ app.post('/api/shop/purchase', async (request, response) => {
   }
 
   if (pluginRestConfigured()) {
-    if (!session.minecraft.uuid) {
-      response.status(400).json({ error: 'java_uuid_required_for_plugin_purchase' })
-      return
-    }
-
     try {
       const pluginResponse = await pluginRequest('/api/shop/purchase', {
         method: 'POST',
         body: JSON.stringify({
-          buyerUuid: session.minecraft.uuid,
+          buyerUuid: session.minecraft.uuid ?? undefined,
+          buyerAccountId: session.minecraft.accountId,
+          buyerName: session.minecraft.name,
+          edition: session.minecraft.edition,
           itemId,
           targetId,
         }),
@@ -227,7 +225,7 @@ app.post('/api/shop/purchase', async (request, response) => {
       return
     } catch (error) {
       console.error('Plugin shop purchase failed', error)
-      response.status(502).json({ error: 'plugin_shop_purchase_failed' })
+      response.status(502).json({ error: pluginErrorMessage(error, 'plugin_shop_purchase_failed') })
       return
     }
   }
@@ -399,10 +397,21 @@ async function pluginRequest<T = unknown>(path: string, init: RequestInit = {}):
   })
 
   if (!response.ok) {
-    throw new Error(`Plugin REST request failed: ${response.status} ${path}`)
+    let detail = ''
+    try {
+      const body = (await response.json()) as { error?: string }
+      detail = body.error ? ` ${body.error}` : ''
+    } catch {
+      // Keep the transport error readable even when the plugin returns an empty body.
+    }
+    throw new Error(`Plugin REST request failed: ${response.status} ${path}${detail}`)
   }
 
   return (await response.json()) as T
+}
+
+function pluginErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback
 }
 
 function toWebShopItem(item: PluginShopItem): ShopItem {
