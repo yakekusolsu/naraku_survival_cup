@@ -31,10 +31,7 @@ onMounted(async () => {
 })
 
 async function logout() {
-  await fetch('/api/auth/logout', {
-    method: 'POST',
-    credentials: 'include',
-  })
+  await nscApi.logout()
   authUser.value = null
 }
 

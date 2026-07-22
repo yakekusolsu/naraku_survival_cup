@@ -64,7 +64,7 @@ export function registerDiscordAuthRoutes(app: express.Express) {
     }
 
     const state = randomToken()
-    response.cookie(OAUTH_STATE_COOKIE, state, cookieOptions(config.secureCookies, OAUTH_STATE_MAX_AGE_SECONDS))
+    response.cookie(OAUTH_STATE_COOKIE, oauthCookieOptions(config.secureCookies, OAUTH_STATE_MAX_AGE_SECONDS))
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -95,8 +95,8 @@ export function registerDiscordAuthRoutes(app: express.Express) {
       const token = await exchangeDiscordCode(code, config)
       const discordUser = await fetchDiscordUser(token.access_token)
       const session = createSession(discordUser)
-      response.clearCookie(OAUTH_STATE_COOKIE, clearCookieOptions(config.secureCookies))
-      response.cookie(SESSION_COOKIE, signSession(session, config.sessionSecret), cookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
+      response.clearCookie(OAUTH_STATE_COOKIE, clearOauthCookieOptions(config.secureCookies))
+      response.cookie(SESSION_COOKIE, signSession(session, config.sessionSecret), sessionCookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
       response.redirect(`${config.webOrigin}/my-page`)
     } catch (error) {
       console.error('Discord OAuth callback failed', error)
@@ -119,7 +119,7 @@ export function registerDiscordAuthRoutes(app: express.Express) {
 
     const hydratedSession = hydrateSession(session)
     if (hydratedSession !== session) {
-      response.cookie(SESSION_COOKIE, signSession(hydratedSession, config.sessionSecret), cookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
+      response.cookie(SESSION_COOKIE, signSession(hydratedSession, config.sessionSecret), sessionCookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
     }
 
     response.json({ user: hydratedSession })
@@ -141,7 +141,7 @@ export function registerDiscordAuthRoutes(app: express.Express) {
       const minecraft = await resolveMinecraftProfile(request.body as { minecraftName?: string; edition?: MinecraftProfile['edition'] })
       saveMinecraftLink(session.discordId, minecraft)
       const updatedSession: AuthSession = { ...session, minecraft }
-      response.cookie(SESSION_COOKIE, signSession(updatedSession, config.sessionSecret), cookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
+      response.cookie(SESSION_COOKIE, signSession(updatedSession, config.sessionSecret), sessionCookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
       response.json({ user: updatedSession })
     } catch (error) {
       response.status(400).json({ error: error instanceof Error ? error.message : 'minecraft_link_failed' })
@@ -162,13 +162,13 @@ export function registerDiscordAuthRoutes(app: express.Express) {
 
     deleteMinecraftLink(session.discordId)
     const updatedSession: AuthSession = { ...session, minecraft: null }
-    response.cookie(SESSION_COOKIE, signSession(updatedSession, config.sessionSecret), cookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
+    response.cookie(SESSION_COOKIE, signSession(updatedSession, config.sessionSecret), sessionCookieOptions(config.secureCookies, SESSION_MAX_AGE_SECONDS))
     response.json({ user: updatedSession })
   })
 
   app.post('/api/auth/logout', (_request, response) => {
     const secureCookies = process.env.NODE_ENV === 'production'
-    response.clearCookie(SESSION_COOKIE, clearCookieOptions(secureCookies))
+    response.clearCookie(SESSION_COOKIE, clearSessionCookieOptions(secureCookies))
     response.json({ ok: true })
   })
 }
@@ -362,7 +362,17 @@ function getCookie(request: express.Request, name: string) {
   return null
 }
 
-function cookieOptions(secure: boolean, maxAgeSeconds: number): express.CookieOptions {
+function sessionCookieOptions(secure: boolean, maxAgeSeconds: number): express.CookieOptions {
+  return {
+    httpOnly: true,
+    sameSite: secure ? 'none' : 'lax',
+    secure,
+    maxAge: maxAgeSeconds * 1000,
+    path: '/',
+  }
+}
+
+function oauthCookieOptions(secure: boolean, maxAgeSeconds: number): express.CookieOptions {
   return {
     httpOnly: true,
     sameSite: 'lax',
@@ -372,7 +382,15 @@ function cookieOptions(secure: boolean, maxAgeSeconds: number): express.CookieOp
   }
 }
 
-function clearCookieOptions(secure: boolean): express.CookieOptions {
+function clearSessionCookieOptions(secure: boolean): express.CookieOptions {
+  return {
+    sameSite: secure ? 'none' : 'lax',
+    secure,
+    path: '/',
+  }
+}
+
+function clearOauthCookieOptions(secure: boolean): express.CookieOptions {
   return {
     sameSite: 'lax',
     secure,

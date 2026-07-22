@@ -45,4 +45,5 @@ export const nscApi = {
   authMe: () => request<AuthMeResponse>('/auth/me'),
   linkMinecraft: (payload: { minecraftName: string; edition: 'java' | 'bedrock' | 'floodgate' }) => post<AuthMeResponse>('/auth/minecraft/link', payload),
   unlinkMinecraft: () => post<AuthMeResponse>('/auth/minecraft/unlink'),
+  logout: () => post<{ ok: boolean }>('/auth/logout'),
 }
