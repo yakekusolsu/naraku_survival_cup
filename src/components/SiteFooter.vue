@@ -11,11 +11,11 @@ import { GitBranch, Radio, Shield } from '@lucide/vue'
           <span class="grid h-11 w-11 place-items-center rounded-xl bg-cyan-300 text-slate-950 shadow-neon"><Shield :size="22" /></span>
           <div>
             <p class="font-black tracking-[0.2em]">NSC SUMMER 2026</p>
-            <p class="text-sm text-white/75">大型eSportsサバイバル大会公式サイト</p>
+            <p class="text-sm text-white/75">大型サバイバル大会公式サイト</p>
           </div>
         </div>
         <p class="max-w-xl text-sm leading-7 text-white/75">
-          Minecraft を土台にしながら、見た目も体験も eSports 大会として成立する公式サイト。Paper Plugin、Node.js BFF、Vue.js frontend をリアルタイム同期します。
+          Minecraft を土台にしながら、見た目も体験も夏の大型イベントとして成立する公式サイト。Paper Plugin、Node.js BFF、Vue.js frontend をリアルタイム同期します。
         </p>
         <div class="mt-5 flex flex-wrap gap-2 text-xs font-black">
           <span class="rounded-full bg-white/10 px-3 py-1 text-cyan-100">主催者: よーそつにぃと</span>

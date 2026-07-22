@@ -71,7 +71,7 @@ onMounted(() => {
       <p class="eyebrow">Event Identity</p>
       <h2 class="title-gradient mt-4 text-4xl font-black md:text-6xl">夏の終わり、信頼が資源になる。</h2>
       <p class="mt-5 leading-8 text-slate-300">
-        NSC Summer 2026 は、最大100人で開催される7日間の大型サバイバルイベントです。ただし見せ方はゲーム公式サイトではなく、eSports大会。
+        NSC Summer 2026 は、最大100人で開催される7日間の大型サバイバルイベントです。夏の海岸ワールドで、探索、外交、略奪、最終決戦が交差します。
         PvP、略奪、同盟、裏切り、配信、ランキング更新まで、すべてがドラマになるように設計されています。
       </p>
       <div class="mt-6 flex flex-wrap gap-2 text-sm font-black">
