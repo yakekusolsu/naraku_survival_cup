@@ -1,6 +1,6 @@
 # 奈落鯖サバイバルカップ Summer 2026 Official Website
 
-大型 eSports 大会の公式サイトとして制作した Vue.js + Node.js 実運用スターターです。
+公式サイトとして制作した Vue.js + Node.js 実運用スターターです。
 
 ## Stack
 
