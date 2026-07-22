@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!assets/|favicon.ico|hero-summer-2026.png|icon.png|manifest.webmanifest|robots.txt|sitemap.xml).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
