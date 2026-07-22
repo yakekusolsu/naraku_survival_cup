@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Disc3, Link as LinkIcon, LockKeyhole } from '@lucide/vue'
 import PageHero from '@/components/PageHero.vue'
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
+const discordLoginUrl = `${apiBaseUrl.replace(/\/+$/, '')}/auth/discord/start`
 </script>
 
 <template>
@@ -9,7 +12,7 @@ import PageHero from '@/components/PageHero.vue'
     <div class="glass rounded-3xl p-6">
       <h2 class="text-3xl font-black">Participant Login</h2>
       <p class="mt-3 leading-8 text-slate-300">Discord OAuth でログインし、Minecraft ID と連携します。認証後は My Page に戻ります。</p>
-      <a class="btn-primary mt-6 w-full" href="/api/auth/discord/start"><Disc3 :size="20" /> Discordでログイン</a>
+      <a class="btn-primary mt-6 w-full" :href="discordLoginUrl"><Disc3 :size="20" /> Discordでログイン</a>
     </div>
     <div class="grid gap-4">
       <div class="glass flex items-center gap-4 rounded-3xl p-5"><LockKeyhole class="text-cyan-200" /><span class="font-bold">JWT + HttpOnly Cookie でセッション管理</span></div>
