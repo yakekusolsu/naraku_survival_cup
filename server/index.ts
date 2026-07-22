@@ -411,7 +411,16 @@ async function pluginRequest<T = unknown>(path: string, init: RequestInit = {}):
 }
 
 function pluginErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback
+  if (!(error instanceof Error) || !error.message) {
+    return fallback
+  }
+  if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+    return 'plugin_rest_unauthorized'
+  }
+  if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED') || error.message.includes('ETIMEDOUT')) {
+    return 'plugin_rest_unreachable'
+  }
+  return error.message
 }
 
 function toWebShopItem(item: PluginShopItem): ShopItem {

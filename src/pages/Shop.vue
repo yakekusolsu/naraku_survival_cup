@@ -85,6 +85,12 @@ function messageForPurchaseError(error: unknown) {
     return 'My PageでMinecraft IDを連携してから購入してください。'
   }
   if (message.includes('plugin_shop_purchase_failed') || message.includes('502')) {
+    if (message.includes('plugin_rest_unauthorized')) {
+      return 'プラグインRESTの認証に失敗しています。RenderのPLUGIN_REST_TOKENとweb.ymlのauth-tokenを一致させてください。'
+    }
+    if (message.includes('plugin_rest_unreachable')) {
+      return 'RenderからMinecraftサーバーのREST APIへ接続できません。IP、ポート8080、ファイアウォール、トンネル設定を確認してください。'
+    }
     if (message.includes('Buyer player is not registered')) {
       return 'Minecraftサーバーに一度参加してから購入してください。連携IDとゲーム内IDも確認してください。'
     }
@@ -93,6 +99,15 @@ function messageForPurchaseError(error: unknown) {
     }
     if (message.includes('No online team members') || message.includes('team.not-in-team')) {
       return 'チーム所属またはオンライン状態が必要です。ゲーム内でチームに参加してから試してください。'
+    }
+    if (message.includes('Buyer must be online')) {
+      return '購入者がMinecraftサーバーにオンラインの状態で購入してください。'
+    }
+    if (message.includes('Shop item is on cooldown')) {
+      return 'この商品はクールダウン中です。時間をおいて再試行してください。'
+    }
+    if (message.includes('Unknown shop item')) {
+      return 'サイトとプラグインのshop.ymlが一致していません。最新jarと設定ファイルを確認してください。'
     }
     return 'プラグインへの送信に失敗しました。サーバー接続、ポイント残高、チーム状態を確認してください。'
   }
