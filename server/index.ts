@@ -3,7 +3,7 @@ import express from 'express'
 import { createServer } from 'node:http'
 import { Server } from 'socket.io'
 import swaggerUi from 'swagger-ui-express'
-import { registerDiscordAuthRoutes } from './auth.js'
+import { readAuthSession, registerDiscordAuthRoutes } from './auth.js'
 import { loadEnvFile } from './env.js'
 import {
   apiEndpoints,
@@ -81,8 +81,20 @@ app.get('/api/api-docs', (_request, response) => response.json(apiEndpoints))
 app.get('/api/openapi.json', (_request, response) => response.json(openApiDocument))
 app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(openApiDocument))
 
-app.post('/api/shop/purchase', requireAdmin, async (request, response) => {
-  const { itemId, targetId, buyerUuid, playerUuid } = request.body as { itemId?: string; targetId?: string; buyerUuid?: string; playerUuid?: string }
+app.post('/api/shop/purchase', async (request, response) => {
+  const session = readAuthSession(request, response)
+  if (!session) {
+    if (!response.headersSent) {
+      response.status(401).json({ error: 'unauthenticated' })
+    }
+    return
+  }
+  if (!session.minecraft) {
+    response.status(400).json({ error: 'minecraft_link_required' })
+    return
+  }
+
+  const { itemId, targetId } = request.body as { itemId?: string; targetId?: string }
   const item = shop.find((entry) => entry.id === itemId)
   if (!item) {
     response.status(404).json({ error: 'shop_item_not_found' })
@@ -94,11 +106,16 @@ app.post('/api/shop/purchase', requireAdmin, async (request, response) => {
   }
 
   if (pluginRestConfigured()) {
+    if (!session.minecraft.uuid) {
+      response.status(400).json({ error: 'java_uuid_required_for_plugin_purchase' })
+      return
+    }
+
     try {
       const pluginResponse = await pluginRequest('/api/shop/purchase', {
         method: 'POST',
         body: JSON.stringify({
-          buyerUuid: buyerUuid ?? playerUuid,
+          buyerUuid: session.minecraft.uuid,
           itemId,
           targetId,
         }),
@@ -120,6 +137,7 @@ app.post('/api/shop/purchase', requireAdmin, async (request, response) => {
       name: item.name,
       target: item.target,
       targetId: targetId ?? null,
+      buyer: session.minecraft.accountId,
       price: item.price,
       effect: item.effect,
       duration: item.duration,

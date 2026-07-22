@@ -173,6 +173,16 @@ export function registerDiscordAuthRoutes(app: express.Express) {
   })
 }
 
+export function readAuthSession(request: express.Request, response: express.Response): AuthSession | null {
+  const config = getAuthConfig(response)
+  if (!config) {
+    return null
+  }
+
+  const session = getSessionFromRequest(request, config.sessionSecret)
+  return session ? hydrateSession(session) : null
+}
+
 function getAuthConfig(response: express.Response): AuthConfig | null {
   const clientId = process.env.DISCORD_CLIENT_ID
   const clientSecret = process.env.DISCORD_CLIENT_SECRET

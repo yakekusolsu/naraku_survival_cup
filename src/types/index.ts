@@ -123,6 +123,24 @@ export interface ShopItem {
   requiresTarget: boolean
 }
 
+export interface ShopPurchaseResponse {
+  ok: boolean
+  purchase: {
+    itemId: string
+    name: string
+    target: string
+    targetId: string | null
+    buyer?: string
+    price: number
+    balanceAfter?: number
+    effect: string
+    duration?: string
+    durationSeconds?: number
+    status?: string
+    purchasedAt?: string
+  }
+}
+
 export interface LiveEvent {
   id: string
   type: EventType

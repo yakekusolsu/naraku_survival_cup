@@ -1,4 +1,4 @@
-import type { ApiEndpoint, AuthMeResponse, LiveEvent, MapMarker, NewsPost, RankingPlayer, ShopItem, Team, TournamentOverview } from '@/types'
+import type { ApiEndpoint, AuthMeResponse, LiveEvent, MapMarker, NewsPost, RankingPlayer, ShopItem, ShopPurchaseResponse, Team, TournamentOverview } from '@/types'
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -10,7 +10,7 @@ async function request<T>(path: string): Promise<T> {
     },
   })
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${path}`)
+    throw new Error(await errorMessage(response, path))
   }
   return (await response.json()) as T
 }
@@ -26,9 +26,18 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     body: body ? JSON.stringify(body) : undefined,
   })
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${path}`)
+    throw new Error(await errorMessage(response, path))
   }
   return (await response.json()) as T
+}
+
+async function errorMessage(response: Response, path: string) {
+  try {
+    const body = (await response.json()) as { error?: string }
+    return `API request failed: ${response.status} ${path} ${body.error ?? ''}`.trim()
+  } catch {
+    return `API request failed: ${response.status} ${path}`
+  }
 }
 
 export const nscApi = {
@@ -40,6 +49,7 @@ export const nscApi = {
   schedule: () => request('/schedule'),
   map: () => request<MapMarker[]>('/map'),
   shop: () => request<ShopItem[]>('/shop'),
+  purchaseShop: (payload: { itemId: string; targetId?: string }) => post<ShopPurchaseResponse>('/shop/purchase', payload),
   events: () => request<LiveEvent[]>('/event'),
   apiDocs: () => request<ApiEndpoint[]>('/api-docs'),
   authMe: () => request<AuthMeResponse>('/auth/me'),

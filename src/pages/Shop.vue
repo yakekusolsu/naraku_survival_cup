@@ -2,11 +2,15 @@
 import { computed, ref } from 'vue'
 import { Crosshair, Shield, ShoppingCart, Sparkles, Swords, Timer, Users, Zap } from '@lucide/vue'
 import PageHero from '@/components/PageHero.vue'
+import { nscApi } from '@/services/api'
 import { useTournamentStore } from '@/stores/tournament'
 import type { ShopItem } from '@/types'
 
 const store = useTournamentStore()
 const activeCategory = ref('All')
+const purchaseMessage = ref('')
+const purchaseError = ref('')
+const purchasingItemId = ref<string | null>(null)
 
 const targetLabels: Record<ShopItem['target'], string> = {
   self: '自分',
@@ -38,6 +42,56 @@ const targetClass = (target: ShopItem['target']) => {
 
 const categories = computed(() => ['All', ...Array.from(new Set(store.shop.map((item) => item.category)))])
 const filteredShop = computed(() => (activeCategory.value === 'All' ? store.shop : store.shop.filter((item) => item.category === activeCategory.value)))
+
+async function purchase(item: ShopItem) {
+  purchaseMessage.value = ''
+  purchaseError.value = ''
+  purchasingItemId.value = item.id
+
+  try {
+    const targetId = item.requiresTarget ? window.prompt(targetPrompt(item))?.trim() : undefined
+    if (item.requiresTarget && !targetId) {
+      purchaseError.value = '対象を入力してください。'
+      return
+    }
+
+    const result = await nscApi.purchaseShop({
+      itemId: item.id,
+      targetId,
+    })
+    const balance = typeof result.purchase.balanceAfter === 'number' ? ` 残高: ${result.purchase.balanceAfter.toLocaleString()}pt` : ''
+    purchaseMessage.value = `${result.purchase.name} の購入リクエストを送信しました。${balance}`
+  } catch (error) {
+    purchaseError.value = messageForPurchaseError(error)
+  } finally {
+    purchasingItemId.value = null
+  }
+}
+
+function targetPrompt(item: ShopItem) {
+  if (item.target === 'enemy_player') {
+    return '対象プレイヤー名またはUUIDを入力してください。'
+  }
+
+  return '対象チーム名またはチームUUIDを入力してください。'
+}
+
+function messageForPurchaseError(error: unknown) {
+  const message = error instanceof Error ? error.message : ''
+  if (message.includes('401')) {
+    return 'Discordログインが必要です。Loginからログインしてください。'
+  }
+  if (message.includes('minecraft_link_required')) {
+    return 'My PageでMinecraft IDを連携してから購入してください。'
+  }
+  if (message.includes('java_uuid_required_for_plugin_purchase')) {
+    return 'プラグイン反映にはJava版UUIDが必要です。統合版/Floodgate購入は現在準備中です。'
+  }
+  if (message.includes('plugin_shop_purchase_failed') || message.includes('502')) {
+    return 'プラグインへの送信に失敗しました。サーバー接続とポイント残高を確認してください。'
+  }
+  return '購入リクエストに失敗しました。時間をおいて再試行してください。'
+}
 </script>
 
 <template>
@@ -67,6 +121,10 @@ const filteredShop = computed(() => (activeCategory.value === 'All' ? store.shop
       >
         {{ category }}
       </button>
+    </div>
+
+    <div v-if="purchaseMessage || purchaseError" class="mb-6 rounded-3xl border p-4 text-sm font-bold" :class="purchaseError ? 'border-orange-300/30 bg-orange-300/15 text-orange-100' : 'border-cyan-300/30 bg-cyan-300/15 text-cyan-100'">
+      {{ purchaseError || purchaseMessage }}
     </div>
 
     <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -102,9 +160,9 @@ const filteredShop = computed(() => (activeCategory.value === 'All' ? store.shop
             <span class="rounded-full border border-orange-300/20 bg-orange-300/10 px-3 py-1 text-xs font-black uppercase text-orange-100">{{ item.rarity }}</span>
             <span class="text-2xl font-black text-cyan-100">{{ item.price.toLocaleString() }} PP</span>
           </div>
-          <button class="btn-primary w-full" type="button">
+          <button class="btn-primary w-full" type="button" :disabled="purchasingItemId === item.id" @click="purchase(item)">
             <ShoppingCart :size="18" />
-            {{ item.requiresTarget ? '対象を選んで購入' : '購入リクエスト' }}
+            {{ purchasingItemId === item.id ? '送信中...' : item.requiresTarget ? '対象を選んで購入' : '購入リクエスト' }}
           </button>
         </div>
       </article>
