@@ -460,11 +460,15 @@ export const events: LiveEvent[] = [
 
 export const apiEndpoints: ApiEndpoint[] = [
   { method: 'GET', path: '/api/ranking', auth: false, description: 'Top100 ranking with point, kill, death and survival metrics.' },
+  { method: 'GET', path: '/api/players', auth: false, description: 'Synced participant list from the Paper plugin.' },
   { method: 'GET', path: '/api/player/{uuid}', auth: false, description: 'Player profile, statistics, titles and recent activity.' },
+  { method: 'GET', path: '/api/teams', auth: false, description: 'Synced team list from the Paper plugin.' },
   { method: 'GET', path: '/api/team/{id}', auth: false, description: 'Team members, points, diplomacy and ranking.' },
   { method: 'GET', path: '/api/news', auth: false, description: 'Markdown-ready news posts managed by admins.' },
   { method: 'GET', path: '/api/event', auth: false, description: 'Live tournament events and announcements.' },
+  { method: 'GET', path: '/api/season', auth: false, description: 'Current season state synced from the Paper plugin.' },
   { method: 'GET', path: '/api/map', auth: false, description: 'Map markers for bases, PvP area, supplies and bosses.' },
+  { method: 'GET', path: '/api/shop', auth: false, description: 'Tournament shop item definitions synced from the Paper plugin.' },
   { method: 'GET', path: '/api/auth/discord/start', auth: false, description: 'Start Discord OAuth authorization code flow.' },
   { method: 'GET', path: '/api/auth/discord/callback', auth: false, description: 'Handle Discord OAuth callback and issue an HttpOnly session cookie.' },
   { method: 'GET', path: '/api/auth/me', auth: false, description: 'Return the current Discord session from the HttpOnly cookie.' },

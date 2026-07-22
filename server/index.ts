@@ -17,7 +17,7 @@ import {
   teams as mockTeams,
 } from '../src/data/mock.js'
 import { openApiDocument } from './openapi.js'
-import type { LiveEvent, RankingPlayer, ShopItem } from '../src/types/index.js'
+import type { LiveEvent, RankingPlayer, ShopItem, Team } from '../src/types/index.js'
 
 loadEnvFile()
 
@@ -47,20 +47,122 @@ app.use(cors({ origin: webOrigin, credentials: true }))
 app.use(express.json({ limit: '1mb' }))
 registerDiscordAuthRoutes(app)
 
-app.get('/api/overview', (_request, response) => response.json(liveOverview))
-app.get('/api/ranking', (_request, response) => response.json(liveRankings))
-app.get('/api/players', (_request, response) => response.json(liveRankings))
-app.get('/api/player/:uuid', (request, response) => {
+app.get('/api/overview', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(liveOverview)
+    return
+  }
+
+  try {
+    const players = await pluginRequest<PluginPlayersResponse>('/api/players?limit=500')
+    response.json({ ...liveOverview, participants: players.items.length })
+  } catch (error) {
+    console.error('Plugin overview sync failed', error)
+    response.status(502).json({ error: 'plugin_overview_unavailable' })
+  }
+})
+app.get('/api/ranking', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(liveRankings)
+    return
+  }
+
+  try {
+    const ranking = await pluginRequest<PluginRankingResponse>('/api/ranking?type=points&limit=100')
+    response.json(ranking.items.map(toWebRankingPlayer))
+  } catch (error) {
+    console.error('Plugin ranking sync failed', error)
+    response.status(502).json({ error: 'plugin_ranking_unavailable' })
+  }
+})
+app.get('/api/players', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(liveRankings)
+    return
+  }
+
+  try {
+    const players = await pluginRequest<PluginPlayersResponse>('/api/players?limit=100')
+    response.json(players.items.map((player, index) => toWebPlayer(player, index + 1)))
+  } catch (error) {
+    console.error('Plugin players sync failed', error)
+    response.status(502).json({ error: 'plugin_players_unavailable' })
+  }
+})
+app.get('/api/player/:uuid', async (request, response) => {
+  if (pluginRestConfigured()) {
+    try {
+      const player = await pluginRequest<PluginPlayer>(`/api/player/${encodeURIComponent(request.params.uuid)}`)
+      response.json(toWebPlayer(player, player.seasonRank ?? undefined))
+      return
+    } catch (error) {
+      console.error('Plugin player sync failed', error)
+      response.status(404).json({ error: 'player_not_found' })
+      return
+    }
+  }
+
   const player = liveRankings.find((entry) => entry.uuid === request.params.uuid || entry.name.toLowerCase() === request.params.uuid.toLowerCase())
   response.status(player ? 200 : 404).json(player ?? { error: 'player_not_found' })
 })
-app.get('/api/teams', (_request, response) => response.json(liveTeams))
-app.get('/api/team/:id', (request, response) => {
+app.get('/api/teams', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(liveTeams)
+    return
+  }
+
+  try {
+    const teams = await pluginRequest<PluginTeamsResponse>('/api/teams?limit=100')
+    response.json(teams.items.map((team, index) => toWebTeam(team, index + 1)))
+  } catch (error) {
+    console.error('Plugin teams sync failed', error)
+    response.status(502).json({ error: 'plugin_teams_unavailable' })
+  }
+})
+app.get('/api/team/:id', async (request, response) => {
+  if (pluginRestConfigured()) {
+    try {
+      const team = await pluginRequest<PluginTeam>(`/api/team/${encodeURIComponent(request.params.id)}`)
+      response.json(toWebTeam(team, 1))
+      return
+    } catch (error) {
+      console.error('Plugin team sync failed', error)
+      response.status(404).json({ error: 'team_not_found' })
+      return
+    }
+  }
+
   const team = liveTeams.find((entry) => entry.id === request.params.id)
   response.status(team ? 200 : 404).json(team ?? { error: 'team_not_found' })
 })
 app.get('/api/news', (_request, response) => response.json(news))
-app.get('/api/event', (_request, response) => response.json(liveEvents))
+app.get(['/api/event', '/api/events'], async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(liveEvents)
+    return
+  }
+
+  try {
+    const events = await pluginRequest<PluginEventsResponse>('/api/events?limit=100')
+    response.json(events.items.map(toWebEvent))
+  } catch (error) {
+    console.error('Plugin events sync failed', error)
+    response.status(502).json({ error: 'plugin_events_unavailable' })
+  }
+})
+app.get('/api/season', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json({ code: 'nsc-summer-2026', name: `${overview.title} ${overview.subtitle}`, status: overview.status, startsAt: overview.startsAt, endsAt: overview.endsAt })
+    return
+  }
+
+  try {
+    response.json(await pluginRequest('/api/season'))
+  } catch (error) {
+    console.error('Plugin season sync failed', error)
+    response.status(502).json({ error: 'plugin_season_unavailable' })
+  }
+})
 app.get('/api/map', (_request, response) => response.json(liveMapMarkers))
 app.get('/api/shop', async (_request, response) => {
   if (!pluginRestConfigured()) {
@@ -218,6 +320,65 @@ type PluginShopResponse = {
   items: PluginShopItem[]
 }
 
+type PluginPlayer = {
+  uuid: string
+  name: string
+  kills: number
+  deaths: number
+  points: number
+  playTimeSeconds: number
+  online: boolean
+  currentTeamId: string | null
+  seasonRank: number | null
+}
+
+type PluginPlayersResponse = {
+  items: PluginPlayer[]
+}
+
+type PluginRankingEntry = {
+  rank: number
+  targetId: string
+  targetType: string
+  displayName: string
+  score: number
+}
+
+type PluginRankingResponse = {
+  items: PluginRankingEntry[]
+}
+
+type PluginTeamMember = {
+  playerUuid: string
+  role: string
+}
+
+type PluginTeam = {
+  id: string
+  name: string
+  points: number
+  leaderUuid: string | null
+  members: PluginTeamMember[]
+}
+
+type PluginTeamsResponse = {
+  items: PluginTeam[]
+}
+
+type PluginEvent = {
+  id: string
+  type: string
+  status: string
+  payload?: unknown
+  startsAt: string | null
+  endsAt: string | null
+  createdAt: string
+}
+
+type PluginEventsResponse = {
+  items: PluginEvent[]
+}
+
 function pluginRestConfigured() {
   return Boolean(pluginRestBaseUrl && pluginRestToken && pluginRestToken !== 'change-me')
 }
@@ -259,6 +420,119 @@ function toWebShopItem(item: PluginShopItem): ShopItem {
     cooldown: existing?.cooldown ?? formatSeconds(item.cooldownSeconds),
     requiresTarget: item.requiresTarget,
   }
+}
+
+function toWebRankingPlayer(entry: PluginRankingEntry): RankingPlayer {
+  return {
+    rank: entry.rank,
+    previousRank: entry.rank,
+    uuid: entry.targetId,
+    name: entry.displayName,
+    team: entry.targetType === 'team' ? entry.displayName : '未所属',
+    points: entry.score,
+    kills: 0,
+    deaths: 0,
+    survivalTime: 0,
+    bounty: 0,
+    title: entry.targetType === 'team' ? 'Team Ranking' : 'NSC Participant',
+    trend: trendFor(entry.score),
+    skinUrl: skinUrl(entry.targetId),
+  }
+}
+
+function toWebPlayer(player: PluginPlayer, rank?: number): RankingPlayer {
+  return {
+    rank: rank ?? player.seasonRank ?? 0,
+    previousRank: rank ?? player.seasonRank ?? 0,
+    uuid: player.uuid,
+    name: player.name,
+    team: player.currentTeamId ?? '未所属',
+    points: player.points,
+    kills: player.kills,
+    deaths: player.deaths,
+    survivalTime: player.playTimeSeconds,
+    bounty: 0,
+    title: player.online ? 'Online' : 'Offline',
+    trend: trendFor(player.points),
+    skinUrl: skinUrl(player.uuid),
+  }
+}
+
+function toWebTeam(team: PluginTeam, index?: number): Team {
+  return {
+    id: team.id,
+    rank: index ?? 0,
+    name: team.name,
+    logo: team.name.slice(0, 2).toUpperCase(),
+    points: team.points,
+    members: team.members.map((member) => member.playerUuid),
+    state: 'neutral',
+    allies: [],
+    enemies: [],
+    color: colorFor(team.id),
+  }
+}
+
+function toWebEvent(event: PluginEvent): LiveEvent {
+  return {
+    id: event.id,
+    type: eventType(event.type),
+    title: eventTitle(event),
+    message: eventMessage(event),
+    publishedAt: event.startsAt ?? event.createdAt,
+  }
+}
+
+function trendFor(score: number) {
+  const base = Math.max(12, Math.min(92, Math.round(score / 150)))
+  return [base * 0.72, base * 0.82, base * 0.76, base * 0.9, base].map((value) => Math.round(Math.min(100, value)))
+}
+
+function skinUrl(uuid: string) {
+  return `https://mc-heads.net/avatar/${encodeURIComponent(uuid)}/128`
+}
+
+function colorFor(value: string) {
+  const palette = ['#00CFFF', '#FF8A00', '#4CC9FF', '#FF6B35', '#83D7FF', '#E6FF0A']
+  let hash = 0
+  for (const character of value) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  }
+  return palette[hash % palette.length]
+}
+
+function eventType(type: string): LiveEvent['type'] {
+  const normalized = type.toLowerCase()
+  if (normalized.includes('supply')) {
+    return 'supply_drop'
+  }
+  if (normalized.includes('boss')) {
+    return 'boss_spawn'
+  }
+  if (normalized.includes('mission')) {
+    return 'daily_mission'
+  }
+  if (normalized.includes('border')) {
+    return 'world_border'
+  }
+  if (normalized.includes('final')) {
+    return 'finale'
+  }
+  return 'announcement'
+}
+
+function eventTitle(event: PluginEvent) {
+  return formatEffect(event.type)
+}
+
+function eventMessage(event: PluginEvent) {
+  if (typeof event.payload === 'object' && event.payload && 'message' in event.payload) {
+    const message = (event.payload as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) {
+      return message
+    }
+  }
+  return event.status.toLowerCase() === 'running' ? 'イベントが開催中です。' : 'イベント情報が同期されました。'
 }
 
 function rarityForPrice(price: number): ShopItem['rarity'] {
