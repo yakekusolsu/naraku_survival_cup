@@ -17,7 +17,7 @@ import {
   teams as mockTeams,
 } from '../src/data/mock.js'
 import { openApiDocument } from './openapi.js'
-import type { LiveEvent, RankingPlayer } from '../src/types/index.js'
+import type { LiveEvent, RankingPlayer, ShopItem } from '../src/types/index.js'
 
 loadEnvFile()
 
@@ -31,6 +31,8 @@ const liveOverview = {
   ...overview,
   participants: demoData ? overview.participants : 0,
 }
+const pluginRestBaseUrl = process.env.PLUGIN_REST_BASE_URL?.replace(/\/+$/, '')
+const pluginRestToken = process.env.PLUGIN_REST_TOKEN
 const app = express()
 const server = createServer(app)
 const webOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:5173'
@@ -60,14 +62,27 @@ app.get('/api/team/:id', (request, response) => {
 app.get('/api/news', (_request, response) => response.json(news))
 app.get('/api/event', (_request, response) => response.json(liveEvents))
 app.get('/api/map', (_request, response) => response.json(liveMapMarkers))
-app.get('/api/shop', (_request, response) => response.json(shop))
+app.get('/api/shop', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(shop)
+    return
+  }
+
+  try {
+    const pluginShop = await pluginRequest<PluginShopResponse>('/api/shop')
+    response.json(pluginShop.items.map(toWebShopItem))
+  } catch (error) {
+    console.error('Plugin shop fetch failed', error)
+    response.status(502).json({ error: 'plugin_shop_unavailable' })
+  }
+})
 app.get('/api/schedule', (_request, response) => response.json(schedule))
 app.get('/api/api-docs', (_request, response) => response.json(apiEndpoints))
 app.get('/api/openapi.json', (_request, response) => response.json(openApiDocument))
 app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(openApiDocument))
 
-app.post('/api/shop/purchase', requireAdmin, (request, response) => {
-  const { itemId, targetId } = request.body as { itemId?: string; targetId?: string }
+app.post('/api/shop/purchase', requireAdmin, async (request, response) => {
+  const { itemId, targetId, buyerUuid, playerUuid } = request.body as { itemId?: string; targetId?: string; buyerUuid?: string; playerUuid?: string }
   const item = shop.find((entry) => entry.id === itemId)
   if (!item) {
     response.status(404).json({ error: 'shop_item_not_found' })
@@ -76,6 +91,26 @@ app.post('/api/shop/purchase', requireAdmin, (request, response) => {
   if (item.requiresTarget && !targetId) {
     response.status(400).json({ error: 'target_required' })
     return
+  }
+
+  if (pluginRestConfigured()) {
+    try {
+      const pluginResponse = await pluginRequest('/api/shop/purchase', {
+        method: 'POST',
+        body: JSON.stringify({
+          buyerUuid: buyerUuid ?? playerUuid,
+          itemId,
+          targetId,
+        }),
+      })
+      io.emit('announcement', liveEvent('announcement', 'Shop Purchase Applied', `${item.name} がゲーム内に反映されました。`))
+      response.status(202).json(pluginResponse)
+      return
+    } catch (error) {
+      console.error('Plugin shop purchase failed', error)
+      response.status(502).json({ error: 'plugin_shop_purchase_failed' })
+      return
+    }
   }
 
   const payload = {
@@ -147,6 +182,95 @@ function requireAdmin(request: express.Request, response: express.Response, next
     return
   }
   response.status(401).json({ error: 'unauthorized' })
+}
+
+type PluginShopItem = {
+  id: string
+  name: string
+  category: string
+  target: ShopItem['target']
+  price: number
+  effect: string
+  durationSeconds: number
+  cooldownSeconds: number
+  requiresTarget: boolean
+}
+
+type PluginShopResponse = {
+  items: PluginShopItem[]
+}
+
+function pluginRestConfigured() {
+  return Boolean(pluginRestBaseUrl && pluginRestToken && pluginRestToken !== 'change-me')
+}
+
+async function pluginRequest<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  if (!pluginRestBaseUrl || !pluginRestToken) {
+    throw new Error('Plugin REST is not configured.')
+  }
+
+  const response = await fetch(`${pluginRestBaseUrl}${path}`, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${pluginRestToken}`,
+      ...init.headers,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Plugin REST request failed: ${response.status} ${path}`)
+  }
+
+  return (await response.json()) as T
+}
+
+function toWebShopItem(item: PluginShopItem): ShopItem {
+  const existing = shop.find((entry) => entry.id === item.id)
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    target: item.target,
+    price: item.price,
+    rarity: existing?.rarity ?? rarityForPrice(item.price),
+    description: existing?.description ?? item.effect,
+    effect: existing?.effect ?? formatEffect(item.effect),
+    duration: existing?.duration ?? formatSeconds(item.durationSeconds),
+    cooldown: existing?.cooldown ?? formatSeconds(item.cooldownSeconds),
+    requiresTarget: item.requiresTarget,
+  }
+}
+
+function rarityForPrice(price: number): ShopItem['rarity'] {
+  if (price >= 10000) {
+    return 'legendary'
+  }
+  if (price >= 5000) {
+    return 'epic'
+  }
+  if (price >= 2000) {
+    return 'rare'
+  }
+  return 'common'
+}
+
+function formatEffect(effect: string) {
+  return effect
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function formatSeconds(seconds: number) {
+  if (seconds <= 0) {
+    return '即時'
+  }
+  if (seconds % 60 === 0) {
+    return `${seconds / 60}分`
+  }
+  return `${seconds}秒`
 }
 
 function liveEvent(type: LiveEvent['type'], title: string, message: string): LiveEvent {
