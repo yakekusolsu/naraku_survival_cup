@@ -24,7 +24,7 @@ export const overview: TournamentOverview = {
   mapSize: '10,000 x 10,000 通常ワールド',
   pvpStartsAt: 'Day 1 / 00:00',
   finaleStartsAt: 'Day 7 / 20:00',
-  discordUrl: 'https://discord.gg/example',
+  discordUrl: 'https://discord.gg/QQ6U9wRU6W',
 }
 
 const names = [
