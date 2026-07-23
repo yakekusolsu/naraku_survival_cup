@@ -66,7 +66,7 @@ const locallyAuthorized = computed(() => {
   }
   return normalizeMcid(minecraft.accountId) === ADMIN_MCID || normalizeMcid(minecraft.name) === ADMIN_MCID
 })
-const authorized = computed(() => locallyAuthorized.value && serverAllowed.value)
+const authorized = computed(() => locallyAuthorized.value || serverAllowed.value)
 
 onMounted(async () => {
   try {
@@ -164,7 +164,7 @@ function sendNotification() {
 }
 
 function normalizeMcid(value: string) {
-  return value.trim().toLowerCase()
+  return value.trim().replace(/^BE_/i, '').toLowerCase()
 }
 
 function adminErrorMessage(error: unknown) {

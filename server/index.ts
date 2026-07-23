@@ -460,7 +460,7 @@ function adminSessionAllowed(session: ReturnType<typeof readAuthSession>) {
 }
 
 function normalizeMcid(value: string) {
-  return value.trim().toLowerCase()
+  return value.trim().replace(/^BE_/i, '').toLowerCase()
 }
 
 type PluginShopItem = {
