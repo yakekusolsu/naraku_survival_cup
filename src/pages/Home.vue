@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { gsap } from 'gsap'
-import { CalendarDays, Crown, Flame, Radio, Shield, Swords, Trophy, Users, Waves, Zap } from '@lucide/vue'
+import { CalendarDays, Crown, Flame, Radio, Shield, Swords, Trophy, Users, Waves } from '@lucide/vue'
 import HeroScene from '@/components/HeroScene.vue'
 import ParticleField from '@/components/ParticleField.vue'
 import RankingTable from '@/components/RankingTable.vue'
@@ -88,18 +88,8 @@ onMounted(() => {
     </div>
   </section>
 
-  <section class="section-shell grid gap-8 pb-20 lg:grid-cols-[1.1fr_.9fr]">
+  <section class="section-shell pb-20">
     <RankingTable :players="store.rankings.slice(0, 8)" compact />
-    <div class="glass rounded-3xl p-6">
-      <p class="eyebrow">Live Operations</p>
-      <h2 class="mt-3 text-3xl font-black">Plugin → REST → Node → Vue</h2>
-      <div class="mt-6 grid gap-4">
-        <div v-for="step in ['Paper Plugin', 'REST API', 'Node.js BFF', 'Socket.IO', 'Vue Dashboard']" :key="step" class="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/6 p-4">
-          <span class="grid h-10 w-10 place-items-center rounded-full bg-cyan-300/15 text-cyan-100"><Zap :size="18" /></span>
-          <span class="font-black">{{ step }}</span>
-        </div>
-      </div>
-    </div>
   </section>
 
   <section class="section-shell pb-24">
