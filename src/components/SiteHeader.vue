@@ -20,6 +20,7 @@ const navigation = [
   { label: 'Players', to: '/players' },
   { label: 'News', to: '/news' },
   { label: 'Map', to: '/map' },
+  { label: 'Shop', to: '/shop' },
   { label: 'API', to: '/api-docs' },
 ]
 
