@@ -30,7 +30,7 @@ export const useTournamentStore = defineStore('tournament', () => {
       nscApi.news().then((value) => (newsState.value = value)),
       nscApi.schedule().then((value) => (scheduleState.value = value as ScheduleItem[])),
       nscApi.map().then((value) => (mapState.value = value)),
-      nscApi.shop().then((value) => (shopState.value = value)),
+      nscApi.shop().then((value) => (shopState.value = mergeShopDefaults(value))),
       nscApi.events().then((value) => (eventsState.value = value)),
       nscApi.apiDocs().then((value) => (apiState.value = value)),
     ]
@@ -70,6 +70,15 @@ export const useTournamentStore = defineStore('tournament', () => {
 
   function pushEvent(event: LiveEvent) {
     eventsState.value = [event, ...eventsState.value].slice(0, 20)
+  }
+
+  function mergeShopDefaults(apiItems: ShopItem[]) {
+    const byId = new Map(apiItems.map((item) => [item.id, item]))
+    const defaultIds = new Set(shop.map((item) => item.id))
+    return [
+      ...shop.map((defaultItem) => byId.get(defaultItem.id) ?? defaultItem),
+      ...apiItems.filter((item) => !defaultIds.has(item.id)),
+    ]
   }
 
   return {
