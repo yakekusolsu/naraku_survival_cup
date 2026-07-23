@@ -33,6 +33,7 @@ const liveOverview = {
 }
 const pluginRestBaseUrl = process.env.PLUGIN_REST_BASE_URL?.replace(/\/+$/, '')
 const pluginRestToken = process.env.PLUGIN_REST_TOKEN
+const adminMcid = (process.env.ADMIN_MCID ?? 'yousotu_neet').trim().toLowerCase()
 const app = express()
 const server = createServer(app)
 const webOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:5173'
@@ -260,20 +261,140 @@ app.post('/api/shop/purchase', async (request, response) => {
   io.emit('announcement', liveEvent('announcement', 'Shop Purchase Queued', `${item.name} の購入リクエストを受け付けました。`))
   response.status(202).json(payload)
 })
-app.post('/api/admin/news', requireAdmin, (request, response) => response.status(201).json({ ok: true, post: request.body }))
-app.post('/api/admin/point', requireAdmin, (request, response) => {
-  const { uuid, delta = 0 } = request.body as { uuid: string; delta: number }
+app.get('/api/admin/search', requireAdmin, async (request, response) => {
+  const query = String(request.query.q ?? '').trim().toLowerCase()
+  if (!query) {
+    response.json({ ok: true, players: [], teams: [] })
+    return
+  }
+
+  try {
+    const [players, teams] = pluginRestConfigured()
+      ? await Promise.all([
+          pluginRequest<PluginPlayersResponse>('/api/players?limit=500').then((value) => value.items.map((player, index) => toWebPlayer(player, index + 1))),
+          pluginRequest<PluginTeamsResponse>('/api/teams?limit=500').then((value) => value.items.map((team, index) => toWebTeam(team, index + 1))),
+        ])
+      : [liveRankings, liveTeams]
+
+    response.json({
+      ok: true,
+      players: players.filter((player) => [player.uuid, player.name, player.team].join(' ').toLowerCase().includes(query)).slice(0, 20),
+      teams: teams.filter((team) => [team.id, team.name, team.members.join(' ')].join(' ').toLowerCase().includes(query)).slice(0, 20),
+    })
+  } catch (error) {
+    console.error('Admin search failed', error)
+    response.status(502).json({ error: pluginErrorMessage(error, 'admin_search_failed') })
+  }
+})
+app.post('/api/admin/news', requireAdmin, (request, response) => {
+  const post = {
+    id: `admin-${Date.now()}`,
+    title: String(request.body.title ?? 'Admin News'),
+    excerpt: String(request.body.excerpt ?? request.body.markdown ?? '').slice(0, 140),
+    category: String(request.body.category ?? '運営'),
+    cover: String(request.body.cover ?? '/hero-summer-2026.png'),
+    publishedAt: new Date().toISOString(),
+    markdown: String(request.body.markdown ?? ''),
+  }
+  news.unshift(post)
+  io.emit('announcement', liveEvent('announcement', 'News Published', post.title))
+  response.status(201).json({ ok: true, post })
+})
+app.post('/api/admin/point', requireAdmin, async (request, response) => {
+  const { uuid, amount = 0, delta = 0, action = 'add', reason = 'admin-site' } = request.body as { uuid: string; amount?: number; delta?: number; action?: 'add' | 'remove'; reason?: string }
+  const numericAmount = Math.abs(Number(amount || delta))
+  if (!uuid || !Number.isFinite(numericAmount) || numericAmount <= 0) {
+    response.status(400).json({ error: 'invalid_point_request' })
+    return
+  }
+
+  if (pluginRestConfigured()) {
+    try {
+      const path = action === 'remove' ? '/api/admin/removePoint' : '/api/admin/addPoint'
+      const result = await pluginRequest(path, {
+        method: 'POST',
+        body: JSON.stringify({ uuid, amount: numericAmount, reason }),
+      })
+      io.emit('announcement', liveEvent('announcement', 'Point Updated', `${uuid} のポイントを更新しました。`))
+      response.json({ ok: true, result })
+      return
+    } catch (error) {
+      console.error('Admin point sync failed', error)
+      response.status(502).json({ error: pluginErrorMessage(error, 'admin_point_failed') })
+      return
+    }
+  }
+
   const player = liveRankings.find((entry) => entry.uuid === uuid)
   if (!player) {
     response.status(404).json({ error: 'player_not_found' })
     return
   }
-  const updated: RankingPlayer = { ...player, points: player.points + Number(delta) }
+  const signedDelta = action === 'remove' ? -numericAmount : numericAmount
+  const updated: RankingPlayer = { ...player, points: player.points + signedDelta }
   io.emit('player_update', updated)
   io.emit('ranking_update', liveRankings.map((entry) => (entry.uuid === updated.uuid ? updated : entry)))
   response.json({ ok: true, player: updated })
 })
-app.post('/api/admin/ban', requireAdmin, (request, response) => response.json({ ok: true, ban: request.body }))
+app.post('/api/admin/event/start', requireAdmin, async (request, response) => {
+  const { type = 'announcement', message = '' } = request.body as { type?: string; message?: string }
+  if (pluginRestConfigured()) {
+    try {
+      const event = await pluginRequest<PluginEvent>('/api/admin/startEvent', {
+        method: 'POST',
+        body: JSON.stringify({ type, message }),
+      })
+      const live = toWebEvent(event)
+      io.emit('event_start', live)
+      response.json({ ok: true, event: live })
+      return
+    } catch (error) {
+      console.error('Admin event start failed', error)
+      response.status(502).json({ error: pluginErrorMessage(error, 'admin_event_start_failed') })
+      return
+    }
+  }
+
+  const event = liveEvent(eventType(type), `Admin Event: ${type}`, message || 'イベントを開始しました。')
+  io.emit('event_start', event)
+  response.json({ ok: true, event })
+})
+app.post('/api/admin/event/end', requireAdmin, async (request, response) => {
+  const { eventId = '', message = '' } = request.body as { eventId?: string; message?: string }
+  if (pluginRestConfigured()) {
+    try {
+      const event = await pluginRequest<PluginEvent>('/api/admin/endEvent', {
+        method: 'POST',
+        body: JSON.stringify({ eventId }),
+      })
+      const live = toWebEvent(event)
+      io.emit('event_end', live)
+      response.json({ ok: true, event: live })
+      return
+    } catch (error) {
+      console.error('Admin event end failed', error)
+      response.status(502).json({ error: pluginErrorMessage(error, 'admin_event_end_failed') })
+      return
+    }
+  }
+
+  const event = liveEvent('announcement', 'Admin Event Ended', message || `イベント ${eventId || 'manual'} を終了しました。`)
+  io.emit('event_end', event)
+  response.json({ ok: true, event })
+})
+app.post('/api/admin/ban', requireAdmin, (request, response) => {
+  const target = String(request.body.target ?? '')
+  const reason = String(request.body.reason ?? '運営判断')
+  io.emit('announcement', liveEvent('announcement', 'Disqualification Notice', `${target} に処分を記録しました: ${reason}`))
+  response.json({ ok: true, ban: { ...request.body, createdAt: new Date().toISOString() } })
+})
+app.post('/api/admin/discord/notify', requireAdmin, (request, response) => {
+  const title = String(request.body.title ?? 'NSC Announcement')
+  const message = String(request.body.message ?? '')
+  const event = liveEvent('announcement', title, message)
+  io.emit('announcement', event)
+  response.json({ ok: true, notification: event })
+})
 
 io.on('connection', (socket) => {
   if (demoData) {
@@ -307,12 +428,30 @@ server.listen(port, () => {
 })
 
 function requireAdmin(request: express.Request, response: express.Response, next: express.NextFunction) {
+  const session = readAuthSession(request, response)
+  if (session && adminSessionAllowed(session)) {
+    next()
+    return
+  }
+
   const authorization = request.header('authorization') ?? ''
   if (authorization.startsWith('Bearer ')) {
     next()
     return
   }
   response.status(401).json({ error: 'unauthorized' })
+}
+
+function adminSessionAllowed(session: ReturnType<typeof readAuthSession>) {
+  const minecraft = session?.minecraft
+  if (!minecraft) {
+    return false
+  }
+  return normalizeMcid(minecraft.accountId) === adminMcid || normalizeMcid(minecraft.name) === adminMcid
+}
+
+function normalizeMcid(value: string) {
+  return value.trim().toLowerCase()
 }
 
 type PluginShopItem = {

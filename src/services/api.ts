@@ -56,4 +56,11 @@ export const nscApi = {
   linkMinecraft: (payload: { minecraftName: string; edition: 'java' | 'bedrock' | 'floodgate' }) => post<AuthMeResponse>('/auth/minecraft/link', payload),
   unlinkMinecraft: () => post<AuthMeResponse>('/auth/minecraft/unlink'),
   logout: () => post<{ ok: boolean }>('/auth/logout'),
+  adminSearch: (query: string) => request<{ ok: boolean; players: RankingPlayer[]; teams: Team[] }>(`/admin/search?q=${encodeURIComponent(query)}`),
+  adminNews: (payload: { title: string; category: string; excerpt: string; markdown: string; cover?: string }) => post<{ ok: boolean; post: NewsPost }>('/admin/news', payload),
+  adminPoint: (payload: { uuid: string; amount: number; action: 'add' | 'remove'; reason: string }) => post<{ ok: boolean; result?: unknown; player?: RankingPlayer }>('/admin/point', payload),
+  adminStartEvent: (payload: { type: string; message: string }) => post<{ ok: boolean; event: LiveEvent }>('/admin/event/start', payload),
+  adminEndEvent: (payload: { eventId: string; message?: string }) => post<{ ok: boolean; event: LiveEvent }>('/admin/event/end', payload),
+  adminBan: (payload: { target: string; reason: string; type: 'ban' | 'disqualify'; notifyDiscord: boolean }) => post<{ ok: boolean; ban: unknown }>('/admin/ban', payload),
+  adminNotify: (payload: { title: string; message: string }) => post<{ ok: boolean; notification: LiveEvent }>('/admin/discord/notify', payload),
 }
