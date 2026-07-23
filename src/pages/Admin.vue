@@ -163,6 +163,14 @@ function sendNotification() {
   })
 }
 
+async function logout() {
+  await nscApi.logout()
+  authUser.value = null
+  serverAllowed.value = false
+  loadFailed.value = true
+  statusMessage.value = 'ログアウトしました。'
+}
+
 function normalizeMcid(value: string) {
   return value.trim().replace(/^BE_/i, '').toLowerCase()
 }
@@ -208,6 +216,7 @@ function adminErrorMessage(error: unknown) {
       <div class="mt-6 flex flex-wrap gap-3">
         <RouterLink v-if="loadFailed" class="btn-primary" to="/login">Discordでログイン</RouterLink>
         <RouterLink v-else class="btn-primary" to="/my-page">My Pageで連携を確認</RouterLink>
+        <button class="btn-secondary" type="button" @click="logout">ログアウト</button>
         <RouterLink class="btn-ghost" to="/">Homeへ戻る</RouterLink>
       </div>
     </div>
@@ -215,6 +224,7 @@ function adminErrorMessage(error: unknown) {
 
   <section v-else class="section-shell grid gap-6 pb-24 xl:grid-cols-[340px_1fr]">
     <aside class="grid gap-3 self-start">
+      <button class="btn-secondary w-full justify-center" type="button" @click="logout">ログアウト</button>
       <button
         v-for="tool in tools"
         :key="tool.id"
