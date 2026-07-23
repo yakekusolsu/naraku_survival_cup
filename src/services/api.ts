@@ -56,6 +56,7 @@ export const nscApi = {
   linkMinecraft: (payload: { minecraftName: string; edition: 'java' | 'bedrock' | 'floodgate' }) => post<AuthMeResponse>('/auth/minecraft/link', payload),
   unlinkMinecraft: () => post<AuthMeResponse>('/auth/minecraft/unlink'),
   logout: () => post<{ ok: boolean }>('/auth/logout'),
+  adminMe: () => request<{ authenticated: boolean; minecraft: AuthMeResponse['user']['minecraft']; allowed: boolean; requiredMcid: string }>('/admin/me'),
   adminSearch: (query: string) => request<{ ok: boolean; players: RankingPlayer[]; teams: Team[] }>(`/admin/search?q=${encodeURIComponent(query)}`),
   adminNews: (payload: { title: string; category: string; excerpt: string; markdown: string; cover?: string }) => post<{ ok: boolean; post: NewsPost }>('/admin/news', payload),
   adminPoint: (payload: { uuid: string; amount: number; action: 'add' | 'remove'; reason: string }) => post<{ ok: boolean; result?: unknown; player?: RankingPlayer }>('/admin/point', payload),

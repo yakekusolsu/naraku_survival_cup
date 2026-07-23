@@ -10,6 +10,8 @@ type ToolId = 'events' | 'ranking' | 'news' | 'search' | 'ban' | 'discord'
 
 const ADMIN_MCID = 'yousotu_neet'
 const authUser = ref<AuthUser | null>(null)
+const serverAllowed = ref(false)
+const serverRequiredMcid = ref(ADMIN_MCID)
 const loading = ref(true)
 const loadFailed = ref(false)
 const activeTool = ref<ToolId>('events')
@@ -57,20 +59,25 @@ const eventTypes = [
 ]
 
 const linkedMcid = computed(() => authUser.value?.minecraft?.accountId ?? authUser.value?.minecraft?.name ?? '')
-const authorized = computed(() => {
+const locallyAuthorized = computed(() => {
   const minecraft = authUser.value?.minecraft
   if (!minecraft) {
     return false
   }
   return normalizeMcid(minecraft.accountId) === ADMIN_MCID || normalizeMcid(minecraft.name) === ADMIN_MCID
 })
+const authorized = computed(() => locallyAuthorized.value && serverAllowed.value)
 
 onMounted(async () => {
   try {
     authUser.value = (await nscApi.authMe()).user
+    const admin = await nscApi.adminMe()
+    serverAllowed.value = admin.allowed
+    serverRequiredMcid.value = admin.requiredMcid
   } catch {
     loadFailed.value = true
     authUser.value = null
+    serverAllowed.value = false
   } finally {
     loading.value = false
   }
@@ -83,7 +90,7 @@ async function runAction(action: () => Promise<string>) {
   try {
     statusMessage.value = await action()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '操作に失敗しました。'
+    errorMessage.value = adminErrorMessage(error)
   } finally {
     busy.value = false
   }
@@ -159,6 +166,14 @@ function sendNotification() {
 function normalizeMcid(value: string) {
   return value.trim().toLowerCase()
 }
+
+function adminErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : ''
+  if (message.includes('401')) {
+    return '管理APIが認証を拒否しました。Renderの再デプロイ後に、My PageでMinecraft IDがyousotu_neetになっているか確認して、Discordへ再ログインしてください。'
+  }
+  return message || '操作に失敗しました。'
+}
 </script>
 
 <template>
@@ -172,7 +187,7 @@ function normalizeMcid(value: string) {
     v-else
     eyebrow="Admin Locked"
     title="管理画面は主催者専用です。"
-    description="Minecraft ID yousotu_neet と連携したDiscordアカウントのみアクセスできます。"
+    :description="`Minecraft ID ${serverRequiredMcid} と連携したDiscordアカウントのみアクセスできます。`"
   />
 
   <section v-if="loading" class="section-shell pb-24">
@@ -187,6 +202,9 @@ function normalizeMcid(value: string) {
       <h2 class="mt-3 text-3xl font-black">このページは表示できません。</h2>
       <p class="mt-4 leading-8 text-slate-300">現在のDiscordアカウントは、管理者Minecraft IDと連携されていません。</p>
       <p v-if="linkedMcid" class="mt-4 rounded-2xl bg-white/8 p-4 text-sm font-bold text-slate-300">現在の連携ID: {{ linkedMcid }}</p>
+      <p class="mt-3 rounded-2xl bg-white/8 p-4 text-sm font-bold text-slate-300">
+        必要な連携ID: {{ serverRequiredMcid }} / サーバー許可: {{ serverAllowed ? 'OK' : 'NG' }}
+      </p>
       <div class="mt-6 flex flex-wrap gap-3">
         <RouterLink v-if="loadFailed" class="btn-primary" to="/login">Discordでログイン</RouterLink>
         <RouterLink v-else class="btn-primary" to="/my-page">My Pageで連携を確認</RouterLink>

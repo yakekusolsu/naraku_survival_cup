@@ -197,6 +197,15 @@ app.get('/api/api-docs', (_request, response) => response.json(apiEndpoints))
 app.get('/api/openapi.json', (_request, response) => response.json(openApiDocument))
 app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(openApiDocument))
 
+app.get('/api/admin/me', (request, response) => {
+  const session = readAuthSession(request, response)
+  response.json({
+    authenticated: Boolean(session),
+    minecraft: session?.minecraft ?? null,
+    allowed: Boolean(session && adminSessionAllowed(session)),
+    requiredMcid: adminMcid,
+  })
+})
 app.post('/api/shop/purchase', async (request, response) => {
   const session = readAuthSession(request, response)
   if (!session) {
