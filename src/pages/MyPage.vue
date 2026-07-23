@@ -7,8 +7,32 @@ import { useTournamentStore } from '@/stores/tournament'
 import type { AuthUser } from '@/types'
 
 const store = useTournamentStore()
-const me = computed(() => store.rankings[0])
 const authUser = ref<AuthUser | null>(null)
+const me = computed(() => {
+  const minecraft = authUser.value?.minecraft
+  if (!minecraft) {
+    return null
+  }
+
+  const uuid = minecraft.uuid ? normalizeId(minecraft.uuid) : ''
+  const accountId = normalizeId(minecraft.accountId)
+  const name = normalizeId(minecraft.name)
+  const bedrockName = normalizeId(minecraft.name.replace(/^BE_/i, ''))
+
+  return (
+    store.rankings.find((player) => {
+      const playerUuid = normalizeId(player.uuid)
+      const playerName = normalizeId(player.name)
+      return (
+        (uuid && playerUuid === uuid) ||
+        playerUuid === accountId ||
+        playerName === accountId ||
+        playerName === name ||
+        playerName === bedrockName
+      )
+    }) ?? null
+  )
+})
 const minecraftName = ref('')
 const edition = ref<'java' | 'bedrock' | 'floodgate'>('java')
 const linkMessage = ref('')
@@ -21,6 +45,10 @@ const linkedAccountPreview = computed(() => {
 
   return edition.value === 'java' ? value : `BE_${value.replace(/^BE_/i, '')}`
 })
+
+function normalizeId(value: string) {
+  return value.replace(/-/g, '').trim().toLowerCase()
+}
 
 onMounted(async () => {
   try {
