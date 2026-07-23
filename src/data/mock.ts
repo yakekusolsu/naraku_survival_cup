@@ -18,7 +18,7 @@ export const overview: TournamentOverview = {
   startsAt: '2026-08-08T20:00:00+09:00',
   endsAt: '2026-08-15T22:00:00+09:00',
   durationDays: 7,
-  prize: '1位 アマギフ1500円分',
+  prize: 'Amazon Gift Card 1,500円分',
   participants: 0,
   maxParticipants: 100,
   mapSize: '10,000 x 10,000 通常ワールド',

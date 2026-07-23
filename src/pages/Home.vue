@@ -16,7 +16,7 @@ const features = [
   { label: '同盟OK', icon: Shield, body: '外交は自由。守る約束も、破る瞬間も大会の一部。' },
   { label: '裏切りOK', icon: Flame, body: '最終日に笑うのは、最後まで信じ切らなかった者かもしれない。' },
   { label: 'チーム自由', icon: Users, body: 'ソロ、少人数、巨大勢力。途中加入と脱退にも対応。' },
-  { label: '優勝賞品あり', icon: Trophy, body: '1位にはアマギフ1500円分をプレゼント。順位変動も配信映え。' },
+  { label: '優勝賞品あり', icon: Trophy, body: '1位にはAmazon Gift Card 1,500円分をプレゼント。順位変動も配信映え。' },
   { label: 'リアルタイム順位', icon: Radio, body: 'Plugin、WebSocket、公式サイトがランキングを同期。' },
 ]
 
@@ -61,7 +61,7 @@ onMounted(() => {
 
   <section class="section-shell relative z-30 grid gap-4 pb-20 pt-10 sm:grid-cols-2 xl:grid-cols-4">
     <StatCard label="開催日" :value="new Date(store.overview.startsAt).toLocaleDateString('ja-JP')" caption="JST / 20:00 Opening" :icon="CalendarDays" />
-    <StatCard label="優勝賞品" value="アマギフ1500" caption="1位に1500円分をプレゼント" :icon="Crown" tone="orange" />
+    <StatCard label="優勝賞品" value="Amazon Gift Card" caption="1,500円分 / 1位に贈呈" :icon="Crown" tone="orange" />
     <StatCard label="参加人数" :value="`${store.overview.participants}/${store.overview.maxParticipants}`" caption="最大100人 / 先着登録" :icon="Users" />
     <StatCard label="マップ" value="10,000 x 10,000" caption="通常ワールドで開催" :icon="Waves" tone="orange" />
   </section>
