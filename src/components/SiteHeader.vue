@@ -18,9 +18,7 @@ const navigation = [
   { label: 'Ranking', to: '/ranking' },
   { label: 'Teams', to: '/teams' },
   { label: 'Players', to: '/players' },
-  { label: 'News', to: '/news' },
   { label: 'Shop', to: '/shop' },
-  { label: 'API', to: '/api-docs' },
 ]
 
 const statusText = computed(() => (store.rankings.length > 0 ? 'LIVE SYNC' : 'PLUGIN待機'))

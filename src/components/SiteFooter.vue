@@ -24,9 +24,7 @@ import { GitBranch, Radio, Shield } from '@lucide/vue'
       </div>
       <div>
         <p class="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-200">Operations</p>
-        <div class="grid gap-2 text-sm text-white/75">
-          <RouterLink to="/api-docs">API Docs</RouterLink>
-        </div>
+        <p class="text-sm leading-7 text-white/75">大会情報とリアルタイム連携を運営中。</p>
       </div>
       <div>
         <p class="mb-3 text-xs font-black uppercase tracking-[0.2em] text-orange-200">Live Stack</p>
