@@ -25,7 +25,6 @@ import { GitBranch, Radio, Shield } from '@lucide/vue'
       <div>
         <p class="mb-3 text-xs font-black uppercase tracking-[0.2em] text-cyan-200">Operations</p>
         <div class="grid gap-2 text-sm text-white/75">
-          <RouterLink to="/admin">Admin Console</RouterLink>
           <RouterLink to="/api-docs">API Docs</RouterLink>
           <RouterLink to="/map">Live Map</RouterLink>
         </div>
