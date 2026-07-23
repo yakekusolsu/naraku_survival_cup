@@ -163,7 +163,20 @@ app.get('/api/season', async (_request, response) => {
     response.status(502).json({ error: 'plugin_season_unavailable' })
   }
 })
-app.get('/api/map', (_request, response) => response.json(liveMapMarkers))
+app.get('/api/map', async (_request, response) => {
+  if (!pluginRestConfigured()) {
+    response.json(liveMapMarkers)
+    return
+  }
+
+  try {
+    const markers = await pluginRequest<PluginMapResponse>('/api/map')
+    response.json(markers.items)
+  } catch (error) {
+    console.error('Plugin map sync failed', error)
+    response.status(502).json({ error: 'plugin_map_unavailable' })
+  }
+})
 app.get('/api/shop', async (_request, response) => {
   if (!pluginRestConfigured()) {
     response.json(shop)
@@ -316,6 +329,21 @@ type PluginShopItem = {
 
 type PluginShopResponse = {
   items: PluginShopItem[]
+}
+
+type PluginMapResponse = {
+  items: Array<{
+    id: string
+    type: 'base' | 'pvp' | 'safe' | 'supply' | 'boss' | 'event' | 'player' | 'border' | 'spawn'
+    label: string
+    x: number
+    y: number
+    danger: number
+    world?: string
+    worldX?: number
+    worldY?: number
+    worldZ?: number
+  }>
 }
 
 type PluginPlayer = {

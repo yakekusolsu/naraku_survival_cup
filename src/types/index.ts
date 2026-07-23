@@ -102,11 +102,15 @@ export interface ScheduleItem {
 
 export interface MapMarker {
   id: string
-  type: 'base' | 'pvp' | 'safe' | 'supply' | 'boss' | 'event'
+  type: 'base' | 'pvp' | 'safe' | 'supply' | 'boss' | 'event' | 'player' | 'border' | 'spawn'
   label: string
   x: number
   y: number
   danger: number
+  world?: string
+  worldX?: number
+  worldY?: number
+  worldZ?: number
 }
 
 export interface ShopItem {

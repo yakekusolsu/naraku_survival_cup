@@ -10,6 +10,9 @@ const colorByType: Record<string, string> = {
   supply: '#FFB347',
   boss: '#FF8A00',
   event: '#DCEFFF',
+  player: '#E6FF0A',
+  border: '#FF6B35',
+  spawn: '#4CC9FF',
 }
 </script>
 
@@ -41,6 +44,9 @@ const colorByType: Record<string, string> = {
         <div v-for="marker in store.map" :key="`${marker.id}-legend`" class="rounded-2xl bg-white/8 p-3 text-sm">
           <p class="font-black" :style="{ color: colorByType[marker.type] }">{{ marker.type }}</p>
           <p class="text-slate-300">{{ marker.label }}</p>
+          <p v-if="marker.worldX !== undefined && marker.worldZ !== undefined" class="mt-1 text-xs text-slate-400">
+            {{ marker.world }} {{ marker.worldX }}, {{ marker.worldZ }}
+          </p>
         </div>
       </div>
     </div>
